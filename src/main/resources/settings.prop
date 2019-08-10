@@ -1,0 +1,5 @@
+#threadpool settings
+corePoolSize=30
+maximumPoolSize=200
+keepAliveTime=60
+queueLength=20
