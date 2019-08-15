@@ -15,7 +15,7 @@ public class AppClient {
 	public static void main(String[] args) {
 		Scanner input = new Scanner(System.in);
 		SimpleChatClient client = new SimpleChatClient();
-		boolean success = client.connect("localhost", 8066);
+		boolean success = client.connect(args[0], Integer.parseInt(args[1]));
 		if (success) {
 			System.out.print("请输入您聊天的名字:");
 			String name = input.nextLine();
