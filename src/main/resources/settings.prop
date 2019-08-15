@@ -1,5 +1,12 @@
 #threadpool settings
 corePoolSize=30
 maximumPoolSize=200
-keepAliveTime=60
-queueLength=20
+keepAliveTime=1000
+queueLength=100
+
+
+server.host=localhost
+server.port=8066
+server.timeout=1000
+server.initSessionId=0
+server.msgSize=2048

@@ -1,15 +1,16 @@
-package pers.mrwangx.tools.chatroom.server.session;
+package pers.mrwangx.tools.chatroom.framework.server.session;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
+import java.util.Date;
 import java.util.logging.Logger;
 
 import com.alibaba.fastjson.JSON;
 
-import pers.mrwangx.tools.chatroom.protocol.Message;
-import pers.mrwangx.tools.chatroom.server.ChatServer;
+import pers.mrwangx.tools.chatroom.framework.server.ChatServer;
+import pers.mrwangx.tools.chatroom.framework.protocol.Message;
 
 import static pers.mrwangx.tools.chatroom.util.Tools.str;
 
@@ -24,50 +25,56 @@ public class Session {
 
 	private int sessionId;
 	private String name;
-	private SocketChannel cChannel;
+	private Date createTime;
+	private SocketChannel channel;
 	private SelectionKey sKey;
 
 	public Session(SocketChannel cChannel, SelectionKey sKey, int sessionId) {
-		this.cChannel = cChannel;
+		this.channel = cChannel;
 		this.sKey = sKey;
 		this.sessionId = sessionId;
 		try {
 			log.info(str("来自[%s]的连接", cChannel.getRemoteAddress()));
-			register();
+			registe();
 		} catch (IOException e) {
 			log.info(e.toString());
 		}
 	}
 
+	public byte[] parseMessage(Message msg) {
+		return JSON.toJSONString(msg).getBytes();
+	}
+
 	public void write(Message msg) {
-		String strMsg = JSON.toJSONString(msg);
+		byte[] byteMsg = parseMessage(msg);
 		ByteBuffer buffer = ByteBuffer.allocate(ChatServer.MSG_SIZE);
 		buffer.clear();
-		buffer.put((strMsg).getBytes());
+		buffer.put(byteMsg);
 		buffer.flip();
 		try {
 			while (buffer.hasRemaining()) {
-				cChannel.write(buffer);
+				channel.write(buffer);
 			}
 		} catch (IOException e) {
 			log.info(e.toString());
 		}
 	}
 
-	private void register() throws IOException {
-		cChannel.configureBlocking(false);
-		cChannel.register(sKey.selector(), SelectionKey.OP_READ, ByteBuffer.allocate(1024));
-		write(idMsg());
+	public Message registeBackMsg() {
+		return Message.newBuilder()
+						.fromId(-1)
+						.toId(-1)
+						.type(Message.ALLOCATE_ID)
+						.time(System.currentTimeMillis())
+						.content(sessionId + "")
+						.build();
 	}
 
-	private Message idMsg() {
-		Message msg = new Message();
-		msg.setContent("你的id是:" + sessionId);
-		msg.setTime(System.currentTimeMillis());
-		msg.setType(Message.ID);
-		msg.setFromId(-1);
-		msg.setToId(-1);
-		return msg;
+	private void registe() throws IOException {
+		channel.configureBlocking(false);
+		channel.register(sKey.selector(), SelectionKey.OP_READ, ByteBuffer.allocate(1024));
+		Message msg = registeBackMsg();
+		write(msg);
 	}
 
 	public int getSessionId() {
@@ -78,20 +85,12 @@ public class Session {
 		this.sessionId = sessionId;
 	}
 
-	public SocketChannel getcChannel() {
-		return cChannel;
+	public SocketChannel getChannel() {
+		return channel;
 	}
 
-	public void setcChannel(SocketChannel cChannel) {
-		this.cChannel = cChannel;
-	}
-
-	public SelectionKey getsKey() {
-		return sKey;
-	}
-
-	public void setsKey(SelectionKey sKey) {
-		this.sKey = sKey;
+	public void setChannel(SocketChannel channel) {
+		this.channel = channel;
 	}
 
 	public String getName() {
@@ -100,5 +99,13 @@ public class Session {
 
 	public void setName(String name) {
 		this.name = name;
+	}
+
+	public Date getCreateTime() {
+		return createTime;
+	}
+
+	public void setCreateTime(long time) {
+		this.createTime = new Date(time);
 	}
 }

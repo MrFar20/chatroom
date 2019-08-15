@@ -1,32 +1,28 @@
-package pers.mrwangx.tools.chatroom.server.session.impl;
+package pers.mrwangx.tools.chatroom.framework.server.session;
 
 import java.nio.channels.SocketChannel;
-import java.util.*;
+import java.util.Collection;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.springframework.stereotype.Component;
-import pers.mrwangx.tools.chatroom.server.session.Session;
-import pers.mrwangx.tools.chatroom.server.session.SessionManager;
-
-/***
- * @author 王昊鑫
- * @description
- * @date 2019年08月08日 13:27
- ***/
-@Component
-public class SessionManagerImpl implements SessionManager {
+/**
+ * @description:
+ * @author: 王昊鑫
+ * @create: 2019年08月12 10:00
+ **/
+public class SimpleSessionManager implements SessionManager<Session> {
 
 	private ConcurrentHashMap<Integer, Session> idSessions;
 	private ConcurrentHashMap<SocketChannel, Session> channelSessions;
 
-	public SessionManagerImpl() {
+	public SimpleSessionManager() {
 		idSessions = new ConcurrentHashMap<>();
 		channelSessions = new ConcurrentHashMap<>();
 	}
 
 	@Override
 	public Session add(Session session) {
-		channelSessions.put(session.getcChannel(), session);
+		channelSessions.put(session.getChannel(), session);
 		return idSessions.put(session.getSessionId(), session);
 	}
 
@@ -42,7 +38,7 @@ public class SessionManagerImpl implements SessionManager {
 
 	@Override
 	public Session remove(Session session) {
-		channelSessions.remove(session.getcChannel());
+		channelSessions.remove(session.getChannel());
 		return idSessions.remove(session.getSessionId());
 	}
 
