@@ -15,7 +15,7 @@ public class AppServer {
 	public static void main(String[] args) {
 		ApplicationContext context = new AnnotationConfigApplicationContext(SpringConfiguration.class);
 		SimpleChatServer server = context.getBean("chatServer", SimpleChatServer.class);
-		server.run();
+		server.start();
 	}
 
 }

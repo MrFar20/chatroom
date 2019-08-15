@@ -12,7 +12,7 @@ import com.alibaba.fastjson.JSON;
 import pers.mrwangx.tools.chatroom.framework.server.ChatServer;
 import pers.mrwangx.tools.chatroom.framework.protocol.Message;
 
-import static pers.mrwangx.tools.chatroom.util.Tools.str;
+import static pers.mrwangx.tools.chatroom.util.StringUtil.str;
 
 /***
  * @author 王昊鑫

@@ -2,13 +2,12 @@ package pers.mrwangx.tools.chatroom.framework.client;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.logging.Logger;
 
 import pers.mrwangx.tools.chatroom.framework.protocol.Message;
-import static pers.mrwangx.tools.chatroom.util.Tools.*;
+import static pers.mrwangx.tools.chatroom.util.StringUtil.*;
 
 /**
  * @description:

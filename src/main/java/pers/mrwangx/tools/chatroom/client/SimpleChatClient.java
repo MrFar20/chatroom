@@ -3,14 +3,13 @@ package pers.mrwangx.tools.chatroom.client;
 import java.io.UnsupportedEncodingException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.Scanner;
 
 import com.alibaba.fastjson.JSON;
 
 import pers.mrwangx.tools.chatroom.framework.client.ChatClient;
 import pers.mrwangx.tools.chatroom.framework.protocol.Message;
 
-import static pers.mrwangx.tools.chatroom.util.Tools.str;
+import static pers.mrwangx.tools.chatroom.util.StringUtil.str;
 
 /**
  * @description:

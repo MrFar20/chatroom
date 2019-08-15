@@ -20,7 +20,7 @@ import pers.mrwangx.tools.chatroom.framework.server.handler.Handler;
 import pers.mrwangx.tools.chatroom.framework.server.session.Session;
 import pers.mrwangx.tools.chatroom.framework.server.session.SessionManager;
 
-import static pers.mrwangx.tools.chatroom.util.Tools.str;
+import static pers.mrwangx.tools.chatroom.util.StringUtil.str;
 
 /**
  * @description:
@@ -78,7 +78,7 @@ public abstract class ChatServer<T extends Message> extends Thread {
 				log.info("服务器启动失败");
 			} else {
 				log.info("服务器启动成功");
-				while (true) {
+				while (!Thread.interrupted()) {
 					if (selector.select(timeout) == 0) {
 						continue;
 					}
@@ -149,6 +149,14 @@ public abstract class ChatServer<T extends Message> extends Thread {
 			}
 		}
 		return null;
+	}
+
+	public void shutdown() {
+		this.interrupt();
+	}
+
+	public boolean isShutDown() {
+		return this.isInterrupted();
 	}
 
 	public String getHost() {

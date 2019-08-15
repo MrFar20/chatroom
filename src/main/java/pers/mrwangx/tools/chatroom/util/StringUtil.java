@@ -5,7 +5,7 @@ package pers.mrwangx.tools.chatroom.util;
  * @description
  * @date 2019年08月08日 15:15
  ***/
-public class Tools {
+public class StringUtil {
 
 	public static String str(String format, Object... args) {
 		return String.format(format, args);
