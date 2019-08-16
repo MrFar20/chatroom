@@ -81,19 +81,40 @@ public abstract class ChatServer<T extends Message> extends Thread {
 				log.info(str("服务器[%s:%d]启动失败", host, port));
 			} else {
 				log.info(str("服务器[%s:%d]启动成功", host, port));
-				while (!Thread.interrupted()) {
-					if (selector.select(timeout) == 0) {
+				while (true) {
+					if (Thread.interrupted()) {
+						break;
+					}
+					try {
+						if (selector.select(timeout) == 0) {
+							continue;
+						}
+					} catch (IOException e) {
+						log.warning(str("服务器运行错误:%s", e.getMessage()));
 						continue;
 					}
 					Iterator<SelectionKey> keyIterator = selector.selectedKeys().iterator();
 					while (keyIterator.hasNext()) {
 						SelectionKey key = keyIterator.next();
 						if (key.isAcceptable()) { //有人连接
-							accept(sSChannel.accept());
+							SocketChannel s = null;
+							try {
+								s = sSChannel.accept();
+							} catch (IOException e) {
+								log.warning(str("服务器运行错误:%s", e.getMessage()));
+							}
+							if (s != null) {
+								accept(s);
+							}
 						} else if (key.isReadable()) { //开始处理消息
 							byte[] data = readData((SocketChannel) key.channel()); //读取字节数据
 							executorService.execute(() -> {
-								T msg = parseMessage(data);						   //将字节流数据转换为自定义的信息
+								T msg = null;
+								try {
+									msg = parseMessage(data);						   //将字节流数据转换为自定义的信息
+								} catch (Exception e) {
+									log.warning(str("服务器运行错误:%s", e.getMessage()));
+								}
 								if (msg != null) {
 									//调用handler处理信息
 									handler.handle(sessionManager.get((SocketChannel) key.channel()), msg);
@@ -104,9 +125,11 @@ public abstract class ChatServer<T extends Message> extends Thread {
 					}
 				}
 			}
-		} catch (IOException e) {
-			log.warning(str("服务器运行错误:%s", e.toString()));
+		}catch (Exception e) {
+			e.printStackTrace();
+			log.warning(str("服务器终止运行:%s", e.getMessage()));
 		}
+
 	}
 
 	private void initServer() {
