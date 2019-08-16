@@ -20,7 +20,8 @@ import pers.mrwangx.tools.chatroom.framework.server.handler.Handler;
 import pers.mrwangx.tools.chatroom.framework.server.session.Session;
 import pers.mrwangx.tools.chatroom.framework.server.session.SessionManager;
 
-import static pers.mrwangx.tools.chatroom.util.StringUtil.str;
+import static pers.mrwangx.tools.chatroom.framework.util.StringUtil.*;
+
 
 /**
  * @description:
@@ -31,20 +32,22 @@ public abstract class ChatServer<T extends Message> extends Thread {
 
 	private static final Logger log = Logger.getLogger("ChatServer");
 
-	public static int MSG_SIZE;
-	private String host;
-	private int port;
-	private int timeout;
-	protected AtomicInteger currentSessionId;
 
-	protected SessionManager sessionManager;
-	protected Handler handler;
+
+	public static int MSG_SIZE;					//单次消息大小
+	private String host;						//绑定本地的主机名
+	private int port;							//绑定端口
+	private int timeout;						//selector的timeout
+	protected AtomicInteger currentSessionId;   //当前session的ID
+
+	protected SessionManager sessionManager;    //sessionManager 用于管理存储session
+	protected Handler handler;					//处理每次消息的handler 会调用handle(session, message)方法
 
 	protected Selector selector = null;
-	protected ServerSocketChannel sSChannel = null;
+	protected ServerSocketChannel sSChannel = null;   //服务器的channel
 	protected SelectionKey sKey = null;
 
-	protected ExecutorService executorService;
+	protected ExecutorService executorService;   //用于处理信息的线程池 构造方法不指定默认 最大处理量为400 队列长度为200 队列满之后会拒绝处理
 
 	public ChatServer(String host, int port, int timeout, int initSessionId, SessionManager sessionManager, Handler handler, int MSG_SIZE) {
 		this.host = host;
@@ -54,7 +57,7 @@ public abstract class ChatServer<T extends Message> extends Thread {
 		this.sessionManager = sessionManager;
 		this.handler = handler;
 		this.MSG_SIZE = MSG_SIZE;
-		this.executorService = new ThreadPoolExecutor(200, 400, 1000, TimeUnit.MICROSECONDS, new ArrayBlockingQueue<>(100));
+		this.executorService = new ThreadPoolExecutor(200, 400, 1000, TimeUnit.MICROSECONDS, new ArrayBlockingQueue<>(200));
 	}
 
 	public ChatServer(String host, int port, int timeout, int initSessionId, SessionManager sessionManager, Handler handler, int MSG_SIZE, ExecutorService executorService) {
@@ -73,11 +76,11 @@ public abstract class ChatServer<T extends Message> extends Thread {
 	@Override
 	public void run() {
 		try {
-			initServer();
+			initServer(); //初始化服务器
 			if (sSChannel == null || selector == null || sKey == null) {
-				log.info("服务器启动失败");
+				log.info(str("服务器[%s:%d]启动失败", host, port));
 			} else {
-				log.info("服务器启动成功");
+				log.info(str("服务器[%s:%d]启动成功", host, port));
 				while (!Thread.interrupted()) {
 					if (selector.select(timeout) == 0) {
 						continue;
@@ -85,13 +88,14 @@ public abstract class ChatServer<T extends Message> extends Thread {
 					Iterator<SelectionKey> keyIterator = selector.selectedKeys().iterator();
 					while (keyIterator.hasNext()) {
 						SelectionKey key = keyIterator.next();
-						if (key.isAcceptable()) {
+						if (key.isAcceptable()) { //有人连接
 							accept(sSChannel.accept());
-						} else if (key.isReadable()) {
-							byte[] data = readData((SocketChannel) key.channel());
+						} else if (key.isReadable()) { //开始处理消息
+							byte[] data = readData((SocketChannel) key.channel()); //读取字节数据
 							executorService.execute(() -> {
-								T msg = parseMessage(data);
+								T msg = parseMessage(data);						   //将字节流数据转换为自定义的信息
 								if (msg != null) {
+									//调用handler处理信息
 									handler.handle(sessionManager.get((SocketChannel) key.channel()), msg);
 								}
 							});
@@ -117,6 +121,12 @@ public abstract class ChatServer<T extends Message> extends Thread {
 		}
 	}
 
+
+	/**
+	 * 将读取的数据转换为自定义的Message对象
+	 * @param data
+	 * @return
+	 */
 	public abstract T parseMessage(byte[] data);
 
 

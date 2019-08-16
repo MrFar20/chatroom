@@ -7,7 +7,7 @@ import java.nio.channels.SocketChannel;
 import java.util.logging.Logger;
 
 import pers.mrwangx.tools.chatroom.framework.protocol.Message;
-import static pers.mrwangx.tools.chatroom.util.StringUtil.*;
+import static pers.mrwangx.tools.chatroom.framework.util.StringUtil.*;
 
 /**
  * @description:
@@ -21,7 +21,7 @@ public abstract class ChatClient <T extends Message> {
 
 	protected InetSocketAddress address;
 	protected SocketChannel channel;
-	protected ReceiveTask receiveTask;
+	protected ReceiveTask receiveTask; //接收信息的线程
 	protected ByteBuffer buffer;
 
 	public ChatClient() {
@@ -52,12 +52,32 @@ public abstract class ChatClient <T extends Message> {
 		return connect(new InetSocketAddress(host, port));
 	}
 
+	/**
+	 * 将接收的字节数据转换为自定义的Message对象
+	 * @param data
+	 * @return
+	 */
 	public abstract T parseToMessage(byte[] data);
 
+	/**
+	 * 将Message对象转换为字节数据
+	 * @param msg
+	 * @return
+	 */
 	public abstract byte[] parseToByteData(T msg);
 
+
+	/**
+	 * 接收到信息，进行处理
+	 * @param msg
+	 */
 	public abstract void onReceiveMessage(T msg);
 
+
+	/**
+	 * 发送信息
+	 * @param msg
+	 */
 	public void sendMessage(T msg) {
 		byte[] data = parseToByteData(msg);
 		buffer.clear();

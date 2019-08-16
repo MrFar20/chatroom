@@ -1,4 +1,4 @@
-package pers.mrwangx.tools.chatroom.util;
+package pers.mrwangx.tools.chatroom.framework.util;
 
 /***
  * @author 王昊鑫

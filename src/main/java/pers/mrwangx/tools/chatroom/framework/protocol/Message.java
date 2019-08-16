@@ -1,7 +1,7 @@
 package pers.mrwangx.tools.chatroom.framework.protocol;
 
 /**
- * @description:
+ * @description: 信息的格式
  * @author: 王昊鑫
  * @create: 2019年08月10 16:59
  **/
