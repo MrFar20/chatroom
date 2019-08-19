@@ -8,6 +8,8 @@ import java.util.logging.Logger;
 
 import pers.mrwangx.tools.chatroom.framework.protocol.Message;
 import static pers.mrwangx.tools.chatroom.framework.util.StringUtil.*;
+import static pers.mrwangx.tools.chatroom.framework.client.ChatClientLogger.*;
+
 
 /**
  * @description:
@@ -32,18 +34,18 @@ public abstract class ChatClient <T extends Message> {
 	public boolean connect(InetSocketAddress address) {
 		boolean flag = false;
 		try {
-			log.info("初始化channel...");
+			info("初始化channel...");
 			this.channel = SocketChannel.open();
-			log.info(str("连接服务器[%s:%d]中...", address.getHostName(), address.getPort()));
+			info(str("连接服务器[%s:%d]中...", address.getHostName(), address.getPort()));
 			channel.connect(address);
 			if (channel.finishConnect() && channel.isConnected()) {
-				log.info("连接成功");
+				info("连接成功");
 				(this.receiveTask = new ReceiveTask()).start();
 				flag = true;
 				this.address = address;
 			}
 		} catch (IOException e) {
-			log.warning("连接失败:" + e.toString());
+			warning("连接失败:", e);
 		}
 		return flag;
 	}
@@ -87,7 +89,7 @@ public abstract class ChatClient <T extends Message> {
 			try {
 				channel.write(buffer);
 			} catch (IOException e) {
-				log.warning("发送数据出错:" + e.toString());
+				warning("发送数据出错:", e);
 			}
 		}
 		buffer.clear();
@@ -113,7 +115,7 @@ public abstract class ChatClient <T extends Message> {
 						onReceiveMessage(msg);
 					}
 				} catch (IOException e) {
-					e.printStackTrace();
+					warning("读取数据出错", e);
 					break;
 				}
 			}

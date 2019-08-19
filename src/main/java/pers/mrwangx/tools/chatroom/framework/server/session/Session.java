@@ -5,24 +5,19 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.util.Date;
-import java.util.logging.Logger;
-
-import com.alibaba.fastjson.JSON;
 
 import pers.mrwangx.tools.chatroom.framework.protocol.Message;
 import pers.mrwangx.tools.chatroom.framework.server.ChatServer;
 
 import static pers.mrwangx.tools.chatroom.framework.util.StringUtil.str;
+import static pers.mrwangx.tools.chatroom.framework.server.ChatServerLogger.*;
 
 /***
  * @author 王昊鑫
  * @description
  * @date 2019年08月07日 14:15
  ***/
-public class Session {
-
-	public static final Logger log = Logger.getLogger("Session");
-
+public abstract class Session {
 	private int sessionId;
 	private String name;
 	private Date createTime;
@@ -34,16 +29,20 @@ public class Session {
 		this.sKey = sKey;
 		this.sessionId = sessionId;
 		try {
-			log.info(str("来自[%s]的连接", cChannel.getRemoteAddress()));
+			info(str("来自[%s]的连接", cChannel.getRemoteAddress()));
 			registe();
 		} catch (IOException e) {
-			log.info(e.toString());
+			info(str("Session[sessionId=%s]注册失败", sessionId));
 		}
 	}
 
-	public byte[] parseMessage(Message msg) {
-		return JSON.toJSONString(msg).getBytes();
+	@Override
+	public String toString() {
+		return "Session[sessionId=" + sessionId + ",name=" + name + ",createTime=" + createTime + "]";
 	}
+
+	public abstract byte[] parseMessage(Message msg);
+
 
 	public void write(Message msg) {
 		byte[] byteMsg = parseMessage(msg);
@@ -56,7 +55,7 @@ public class Session {
 				channel.write(buffer);
 			}
 		} catch (IOException e) {
-			log.info(e.toString());
+			warning(this + "写数据错误", e);
 		}
 	}
 
@@ -72,7 +71,7 @@ public class Session {
 
 	private void registe() throws IOException {
 		channel.configureBlocking(false);
-		channel.register(sKey.selector(), SelectionKey.OP_READ, ByteBuffer.allocate(1024));
+		channel.register(sKey.selector(), SelectionKey.OP_READ, ByteBuffer.allocate(ChatServer.MSG_SIZE));
 		Message msg = registeBackMsg();
 		write(msg);
 	}

@@ -13,6 +13,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import pers.mrwangx.tools.chatroom.framework.protocol.Message;
@@ -21,6 +22,7 @@ import pers.mrwangx.tools.chatroom.framework.server.session.Session;
 import pers.mrwangx.tools.chatroom.framework.server.session.SessionManager;
 
 import static pers.mrwangx.tools.chatroom.framework.util.StringUtil.*;
+import static pers.mrwangx.tools.chatroom.framework.server.ChatServerLogger.*;
 
 
 /**
@@ -29,10 +31,6 @@ import static pers.mrwangx.tools.chatroom.framework.util.StringUtil.*;
  * @create: 2019年08月10 16:56
  **/
 public abstract class ChatServer<T extends Message> extends Thread {
-
-	private static final Logger log = Logger.getLogger("ChatServer");
-
-
 
 	public static int MSG_SIZE;					//单次消息大小
 	private String host;						//绑定本地的主机名
@@ -78,9 +76,9 @@ public abstract class ChatServer<T extends Message> extends Thread {
 		try {
 			initServer(); //初始化服务器
 			if (sSChannel == null || selector == null || sKey == null) {
-				log.info(str("服务器[%s:%d]启动失败", host, port));
+				info(str("服务器[%s:%d]启动失败", host, port));
 			} else {
-				log.info(str("服务器[%s:%d]启动成功", host, port));
+				info(str("服务器[%s:%d]启动成功", host, port));
 				while (true) {
 					if (Thread.interrupted()) {
 						break;
@@ -90,7 +88,7 @@ public abstract class ChatServer<T extends Message> extends Thread {
 							continue;
 						}
 					} catch (IOException e) {
-						log.warning(str("服务器运行错误:%s", e.getMessage()));
+						warning("服务器错误", e);
 						continue;
 					}
 					Iterator<SelectionKey> keyIterator = selector.selectedKeys().iterator();
@@ -101,7 +99,7 @@ public abstract class ChatServer<T extends Message> extends Thread {
 							try {
 								s = sSChannel.accept();
 							} catch (IOException e) {
-								log.warning(str("服务器运行错误:%s", e.getMessage()));
+								warning("服务器接受连接错误", e);
 							}
 							if (s != null) {
 								accept(s);
@@ -113,7 +111,8 @@ public abstract class ChatServer<T extends Message> extends Thread {
 								try {
 									msg = parseMessage(data);						   //将字节流数据转换为自定义的信息
 								} catch (Exception e) {
-									log.warning(str("服务器运行错误:%s", e.getMessage()));
+									e.printStackTrace();
+									warning( "转换信息错误", e);
 								}
 								if (msg != null) {
 									//调用handler处理信息
@@ -126,8 +125,7 @@ public abstract class ChatServer<T extends Message> extends Thread {
 				}
 			}
 		}catch (Exception e) {
-			e.printStackTrace();
-			log.warning(str("服务器终止运行:%s", e.getMessage()));
+			warning("服务器终止运行", e);
 		}
 
 	}
@@ -140,7 +138,7 @@ public abstract class ChatServer<T extends Message> extends Thread {
 			sSChannel.configureBlocking(false);
 			sKey = sSChannel.register(selector, SelectionKey.OP_ACCEPT);
 		} catch (IOException e) {
-			log.warning(e.toString());
+			warning("初始化服务器错误:", e);
 		}
 	}
 
@@ -152,9 +150,24 @@ public abstract class ChatServer<T extends Message> extends Thread {
 	 */
 	public abstract T parseMessage(byte[] data);
 
+	/**
+	 * session被创建时调用
+	 * @param session
+	 */
+	public void sessionCreated(Session session) {
+	}
+
+	/**
+	 * 自定义创建session
+	 * @param channel
+	 * @return
+	 */
+	protected abstract Session newSession(SocketChannel channel);
+
 
 	public void accept(SocketChannel channel) {
-		Session session = new Session(channel, sKey, currentSessionId.incrementAndGet());
+		Session session = this.newSession(channel);
+		sessionCreated(session);
 		sessionManager.add(session);
 	}
 
@@ -172,13 +185,13 @@ public abstract class ChatServer<T extends Message> extends Thread {
 			}
 			return data;
 		} catch (IOException e) {
-			log.warning(e.toString());
+			warning("读取信息错误", e);
 			try {
 				Session session = sessionManager.remove(channel);
-				log.info(str("session[id=%d, name:%s]断开连接,移除", session.getSessionId(), session.getName()));
+				info(session + "断开连接,移除");
 				channel.close();
 			} catch (IOException ex) {
-				log.warning(e.toString());
+				warning(e.toString());
 			}
 		}
 		return null;
