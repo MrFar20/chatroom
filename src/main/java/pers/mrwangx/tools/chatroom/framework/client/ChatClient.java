@@ -16,17 +16,24 @@ import static pers.mrwangx.tools.chatroom.framework.client.ChatClientLogger.*;
  * @author: 王昊鑫
  * @create: 2019年08月12 15:00
  **/
-public abstract class ChatClient <T extends Message> {
+public abstract class ChatClient {
 
-	public static final Logger log = Logger.getLogger("ChatClient");
 	private static int MSG_SIZE = 2048;
+	private long heartBeatInterval;
 
 	protected InetSocketAddress address;
 	protected SocketChannel channel;
 	protected ReceiveTask receiveTask; //接收信息的线程
+	protected HeartBeatTask heartBeatTask;
 	protected ByteBuffer buffer;
 
-	public ChatClient() {
+	public ChatClient(long heartBeatInterval) {
+		this(heartBeatInterval, MSG_SIZE);
+	}
+
+	public ChatClient(long heartBeatInterval, int MSG_SIZE) {
+		this.heartBeatInterval = heartBeatInterval;
+		this.MSG_SIZE = MSG_SIZE;
 		buffer = ByteBuffer.allocate(MSG_SIZE);
 	}
 
@@ -41,6 +48,7 @@ public abstract class ChatClient <T extends Message> {
 			if (channel.finishConnect() && channel.isConnected()) {
 				info("连接成功");
 				(this.receiveTask = new ReceiveTask()).start();
+				(this.heartBeatTask = new HeartBeatTask()).start();
 				flag = true;
 				this.address = address;
 			}
@@ -59,28 +67,28 @@ public abstract class ChatClient <T extends Message> {
 	 * @param data
 	 * @return
 	 */
-	public abstract T parseToMessage(byte[] data);
+	public abstract Message parseToMessage(byte[] data);
 
 	/**
 	 * 将Message对象转换为字节数据
 	 * @param msg
 	 * @return
 	 */
-	public abstract byte[] parseToByteData(T msg);
+	public abstract byte[] parseToByteData(Message msg);
 
 
 	/**
 	 * 接收到信息，进行处理
 	 * @param msg
 	 */
-	public abstract void onReceiveMessage(T msg);
+	public abstract void onReceiveMessage(Message msg);
 
 
 	/**
 	 * 发送信息
 	 * @param msg
 	 */
-	public void sendMessage(T msg) {
+	public void sendMessage(Message msg) {
 		byte[] data = parseToByteData(msg);
 		buffer.clear();
 		buffer.put(data);
@@ -113,7 +121,7 @@ public abstract class ChatClient <T extends Message> {
 					if (i > 0) {
 						byte[] datar = new byte[i];
 						System.arraycopy(data, 0, datar, 0, i);
-						T msg = parseToMessage(datar);
+						Message msg = parseToMessage(datar);
 						onReceiveMessage(msg);
 					}
 				} catch (IOException e) {
@@ -123,6 +131,24 @@ public abstract class ChatClient <T extends Message> {
 			}
 		}
 	}
+
+	private class HeartBeatTask extends Thread {
+
+		@Override
+		public void run() {
+			Message message = Message.newBuilder().type(Message.HEART_BEAT_PAC).build();
+			while (true) {
+				sendMessage(message);
+				try {
+					Thread.sleep(heartBeatInterval);
+				} catch (InterruptedException e) {
+					warning("发送心跳包错误", e);
+				}
+			}
+		}
+
+	}
+
 
 
 
