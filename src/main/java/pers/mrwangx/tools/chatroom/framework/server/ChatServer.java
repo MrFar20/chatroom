@@ -13,8 +13,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import pers.mrwangx.tools.chatroom.framework.protocol.Message;
 import pers.mrwangx.tools.chatroom.framework.server.handler.Handler;
@@ -109,7 +107,7 @@ public abstract class ChatServer<T extends Message> extends Thread {
 							executorService.execute(() -> {
 								T msg = null;
 								try {
-									msg = parseMessage(data);						   //将字节流数据转换为自定义的信息
+									msg = parseToMessage(data);						   //将字节流数据转换为自定义的信息
 								} catch (Exception e) {
 									e.printStackTrace();
 									warning( "转换信息错误", e);
@@ -148,7 +146,7 @@ public abstract class ChatServer<T extends Message> extends Thread {
 	 * @param data
 	 * @return
 	 */
-	public abstract T parseMessage(byte[] data);
+	public abstract T parseToMessage(byte[] data);
 
 	/**
 	 * session被创建时调用

@@ -41,11 +41,11 @@ public abstract class Session {
 		return "Session[sessionId=" + sessionId + ",name=" + name + ",createTime=" + createTime + "]";
 	}
 
-	public abstract byte[] parseMessage(Message msg);
+	public abstract byte[] parseToByteData(Message msg);
 
 
 	public void write(Message msg) {
-		byte[] byteMsg = parseMessage(msg);
+		byte[] byteMsg = parseToByteData(msg);
 		ByteBuffer buffer = ByteBuffer.allocate(ChatServer.MSG_SIZE);
 		buffer.clear();
 		buffer.put(byteMsg);
