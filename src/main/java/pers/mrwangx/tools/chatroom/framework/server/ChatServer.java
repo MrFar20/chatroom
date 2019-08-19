@@ -22,22 +22,21 @@ import pers.mrwangx.tools.chatroom.framework.server.session.SessionManager;
 import static pers.mrwangx.tools.chatroom.framework.util.StringUtil.*;
 import static pers.mrwangx.tools.chatroom.framework.server.ChatServerLogger.*;
 
-
 /**
  * @description:
  * @author: 王昊鑫
  * @create: 2019年08月10 16:56
  **/
-public abstract class ChatServer<T extends Message> extends Thread {
+public abstract class ChatServer <T extends Message> extends Thread {
 
-	public static int MSG_SIZE;					//单次消息大小
-	private String host;						//绑定本地的主机名
-	private int port;							//绑定端口
-	private int timeout;						//selector的timeout
+	public static int MSG_SIZE;                    //单次消息大小
+	private String host;                        //绑定本地的主机名
+	private int port;                            //绑定端口
+	private int timeout;                        //selector的timeout
 	protected AtomicInteger currentSessionId;   //当前session的ID
 
 	protected SessionManager sessionManager;    //sessionManager 用于管理存储session
-	protected Handler handler;					//处理每次消息的handler 会调用handle(session, message)方法
+	protected Handler handler;                    //处理每次消息的handler 会调用handle(session, message)方法
 
 	protected Selector selector = null;
 	protected ServerSocketChannel sSChannel = null;   //服务器的channel
@@ -66,8 +65,6 @@ public abstract class ChatServer<T extends Message> extends Thread {
 		this.MSG_SIZE = MSG_SIZE;
 		this.executorService = executorService;
 	}
-
-
 
 	@Override
 	public void run() {
@@ -124,7 +121,7 @@ public abstract class ChatServer<T extends Message> extends Thread {
 					}
 				}
 			}
-		}catch (Exception e) {
+		} catch (Exception e) {
 			warning("服务器终止运行", e);
 		}
 
@@ -142,9 +139,9 @@ public abstract class ChatServer<T extends Message> extends Thread {
 		}
 	}
 
-
 	/**
 	 * 将读取的数据转换为自定义的Message对象
+	 *
 	 * @param data
 	 * @return
 	 */
@@ -152,6 +149,7 @@ public abstract class ChatServer<T extends Message> extends Thread {
 
 	/**
 	 * session被创建时调用
+	 *
 	 * @param session
 	 */
 	public void sessionCreated(Session session) {
@@ -159,11 +157,11 @@ public abstract class ChatServer<T extends Message> extends Thread {
 
 	/**
 	 * 自定义创建session
+	 *
 	 * @param channel
 	 * @return
 	 */
 	protected abstract Session newSession(SocketChannel channel);
-
 
 	public void accept(SocketChannel channel) {
 		Session session = this.newSession(channel);
@@ -175,14 +173,20 @@ public abstract class ChatServer<T extends Message> extends Thread {
 		try {
 			ByteBuffer buffer = ByteBuffer.allocate(MSG_SIZE);
 			byte[] data = new byte[MSG_SIZE];
-			int i = 0;
-			while (channel.read(buffer) > 0) {
-				buffer.flip();
-				while (buffer.hasRemaining()) {
-					data[i++] = buffer.get();
-				}
-				buffer.clear();
+			int i = 0, flag;
+			if (channel.read(buffer) == -1) {
+				Session session = sessionManager.remove(channel);
+				info(session + "断开连接,移除");
+				channel.close();
+				return null;
 			}
+
+			buffer.flip();
+			while (buffer.hasRemaining()) {
+				data[i++] = buffer.get();
+			}
+			buffer.clear();
+
 			if (i > 0) {
 				byte[] datar = new byte[i];
 				System.arraycopy(data, 0, datar, 0, i);

@@ -113,7 +113,7 @@ public abstract class ChatClient <T extends Message> {
 					if (i > 0) {
 						byte[] datar = new byte[i];
 						System.arraycopy(data, 0, datar, 0, i);
-						T msg = parseToMessage(data);
+						T msg = parseToMessage(datar);
 						onReceiveMessage(msg);
 					}
 				} catch (IOException e) {
