@@ -104,19 +104,21 @@ public abstract class ChatServer<T extends Message> extends Thread {
 							}
 						} else if (key.isReadable()) { //开始处理消息
 							byte[] data = readData((SocketChannel) key.channel()); //读取字节数据
-							executorService.execute(() -> {
-								T msg = null;
-								try {
-									msg = parseToMessage(data);						   //将字节流数据转换为自定义的信息
-								} catch (Exception e) {
-									e.printStackTrace();
-									warning( "转换信息错误", e);
-								}
-								if (msg != null) {
-									//调用handler处理信息
-									handler.handle(sessionManager.get((SocketChannel) key.channel()), msg);
-								}
-							});
+							if (data != null) {
+								executorService.execute(() -> {
+									T msg = null;
+									try {
+										msg = parseToMessage(sessionManager.get((SocketChannel) key.channel()), data);                           //将字节流数据转换为自定义的信息
+									} catch (Exception e) {
+										e.printStackTrace();
+										warning("转换信息错误", e);
+									}
+									if (msg != null) {
+										//调用handler处理信息
+										handler.handle(sessionManager.get((SocketChannel) key.channel()), msg);
+									}
+								});
+							}
 						}
 						keyIterator.remove();
 					}
@@ -146,7 +148,7 @@ public abstract class ChatServer<T extends Message> extends Thread {
 	 * @param data
 	 * @return
 	 */
-	public abstract T parseToMessage(byte[] data);
+	public abstract T parseToMessage(Session session, byte[] data);
 
 	/**
 	 * session被创建时调用
@@ -181,7 +183,12 @@ public abstract class ChatServer<T extends Message> extends Thread {
 				}
 				buffer.clear();
 			}
-			return data;
+			if (i > 0) {
+				byte[] datar = new byte[i];
+				System.arraycopy(data, 0, datar, 0, i);
+				return datar;
+			}
+			return null;
 		} catch (IOException e) {
 			warning("读取信息错误", e);
 			try {
