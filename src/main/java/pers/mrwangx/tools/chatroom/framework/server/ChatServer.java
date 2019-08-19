@@ -223,7 +223,14 @@ public abstract class ChatServer extends Thread {
                     }
                 });
                 delSessions.forEach(session -> {
-                    sessionManager.remove(session);
+					try {
+						session.getChannel().close();
+					} catch (IOException e) {
+						warning("心跳检测,关闭" + session + "错误:" + e.getMessage());
+					}
+					info("心跳检测,移除" + session);
+					sessionManager.remove(session);
+
                 });
                 try {
                     Thread.sleep(heartBeatCheckInterval);
