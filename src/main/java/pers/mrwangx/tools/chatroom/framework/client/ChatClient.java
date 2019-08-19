@@ -111,6 +111,8 @@ public abstract class ChatClient <T extends Message> {
 						}
 					}
 					if (i > 0) {
+						byte[] datar = new byte[i];
+						System.arraycopy(data, 0, datar, 0, i);
 						T msg = parseToMessage(data);
 						onReceiveMessage(msg);
 					}
