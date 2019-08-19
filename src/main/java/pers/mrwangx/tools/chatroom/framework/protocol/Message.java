@@ -11,6 +11,7 @@ public class Message {
 	public static final int MESSAGE = 1;
 	public static final int CMD = 2;
 	public static final int UPDATE_NAME = 3;
+	public static final int HEART_BEAT_PAC = 4;
 
 	private int type;
 	private int fromId;

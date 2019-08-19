@@ -7,7 +7,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.Iterator;
+import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -33,6 +33,8 @@ public abstract class ChatServer <T extends Message> extends Thread {
 	private String host;                        //绑定本地的主机名
 	private int port;                            //绑定端口
 	private int timeout;                        //selector的timeout
+	private long heartBeatInterval;
+	private long heartBeatCheckInterval;
 	protected AtomicInteger currentSessionId;   //当前session的ID
 
 	protected SessionManager sessionManager;    //sessionManager 用于管理存储session
@@ -44,22 +46,17 @@ public abstract class ChatServer <T extends Message> extends Thread {
 
 	protected ExecutorService executorService;   //用于处理信息的线程池 构造方法不指定默认 最大处理量为400 队列长度为200 队列满之后会拒绝处理
 
-	public ChatServer(String host, int port, int timeout, int initSessionId, SessionManager sessionManager, Handler handler, int MSG_SIZE) {
-		this.host = host;
-		this.port = port;
-		this.timeout = timeout;
-		this.currentSessionId = new AtomicInteger(initSessionId);
-		this.sessionManager = sessionManager;
-		this.handler = handler;
-		this.MSG_SIZE = MSG_SIZE;
-		this.executorService = new ThreadPoolExecutor(200, 400, 1000, TimeUnit.MICROSECONDS, new ArrayBlockingQueue<>(200));
+	public ChatServer(String host, int port, int timeout, int initSessionId, long heartBeatInterval, long heartBeatCheckInterval,  SessionManager sessionManager, Handler handler, int MSG_SIZE) {
+		this(host, port, timeout, initSessionId, heartBeatInterval, heartBeatCheckInterval, sessionManager, handler, MSG_SIZE, new ThreadPoolExecutor(200, 400, 1000, TimeUnit.MICROSECONDS, new ArrayBlockingQueue<>(200)));
 	}
 
-	public ChatServer(String host, int port, int timeout, int initSessionId, SessionManager sessionManager, Handler handler, int MSG_SIZE, ExecutorService executorService) {
+	public ChatServer(String host, int port, int timeout, int initSessionId, long heartBeatInterval, long heartBeatCheckInterval, SessionManager sessionManager, Handler handler, int MSG_SIZE, ExecutorService executorService) {
 		this.host = host;
 		this.port = port;
 		this.timeout = timeout;
 		this.currentSessionId = new AtomicInteger(initSessionId);
+		this.heartBeatInterval = heartBeatInterval;
+		this.heartBeatCheckInterval = heartBeatCheckInterval;
 		this.sessionManager = sessionManager;
 		this.handler = handler;
 		this.MSG_SIZE = MSG_SIZE;
@@ -111,8 +108,12 @@ public abstract class ChatServer <T extends Message> extends Thread {
 										warning("转换信息错误", e);
 									}
 									if (msg != null) {
-										//调用handler处理信息
-										handler.handle(sessionManager.get((SocketChannel) key.channel()), msg);
+										if (msg.getType() == Message.HEART_BEAT_PAC) {
+											handleHeartBeat(sessionManager.get((SocketChannel) key.channel()));
+										} else {
+											//调用handler处理信息
+											handler.handle(sessionManager.get((SocketChannel) key.channel()), msg);
+										}
 									}
 								});
 							}
@@ -169,6 +170,10 @@ public abstract class ChatServer <T extends Message> extends Thread {
 		sessionManager.add(session);
 	}
 
+	public void handleHeartBeat(Session session) {
+		session.setLastHeartBeatTime(System.currentTimeMillis());
+	}
+
 	public byte[] readData(SocketChannel channel) {
 		try {
 			ByteBuffer buffer = ByteBuffer.allocate(MSG_SIZE);
@@ -204,6 +209,29 @@ public abstract class ChatServer <T extends Message> extends Thread {
 			}
 		}
 		return null;
+	}
+
+	private class HeartBeatTask extends Thread {
+		@Override
+		public void run() {
+			while (true) {
+				List<Session> delSessions = new ArrayList<>();
+				sessionManager.getSessions().forEach(session -> {
+					Session s = (Session) session;
+					if (System.currentTimeMillis() - s.getLastHeartBeatTime() > heartBeatInterval) {
+						delSessions.add(s);
+					}
+				});
+				delSessions.forEach(session -> {
+					sessionManager.remove(session);
+				});
+				try {
+					Thread.sleep(15000);
+				} catch (InterruptedException e) {
+					warning("检测是否断开连接出错"  + e.getMessage());
+				}
+			}
+		}
 	}
 
 	public void shutdown() {

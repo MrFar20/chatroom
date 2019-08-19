@@ -23,6 +23,7 @@ public abstract class Session {
 	private Date createTime;
 	private SocketChannel channel;
 	private SelectionKey sKey;
+	private long lastHeartBeatTime;
 
 	public Session(SocketChannel cChannel, SelectionKey sKey, int sessionId) {
 		this.channel = cChannel;
@@ -74,6 +75,30 @@ public abstract class Session {
 		channel.register(sKey.selector(), SelectionKey.OP_READ, ByteBuffer.allocate(ChatServer.MSG_SIZE));
 		Message msg = registeBackMsg();
 		write(msg);
+		lastHeartBeatTime = System.currentTimeMillis();
+	}
+
+	public Session setCreateTime(Date createTime) {
+		this.createTime = createTime;
+		return this;
+	}
+
+	public SelectionKey getsKey() {
+		return sKey;
+	}
+
+	public Session setsKey(SelectionKey sKey) {
+		this.sKey = sKey;
+		return this;
+	}
+
+	public long getLastHeartBeatTime() {
+		return lastHeartBeatTime;
+	}
+
+	public Session setLastHeartBeatTime(long lastHeartBeatTime) {
+		this.lastHeartBeatTime = lastHeartBeatTime;
+		return this;
 	}
 
 	public int getSessionId() {
