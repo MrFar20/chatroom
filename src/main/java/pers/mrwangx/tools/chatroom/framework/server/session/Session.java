@@ -17,7 +17,7 @@ import static pers.mrwangx.tools.chatroom.framework.server.ChatServerLogger.*;
  * @description
  * @date 2019年08月07日 14:15
  ***/
-public abstract class Session {
+public abstract class Session<M extends Message> {
 	private int sessionId;
 	private String name;
 	private Date createTime;
@@ -42,10 +42,10 @@ public abstract class Session {
 		return "Session[sessionId=" + sessionId + ",name=" + name + ",createTime=" + createTime + "]";
 	}
 
-	public abstract byte[] parseToByteData(Message msg);
+	public abstract byte[] parseToByteData(M msg);
 
 
-	public void write(Message msg) {
+	public void write(M msg) {
 		byte[] byteMsg = parseToByteData(msg);
 		ByteBuffer buffer = ByteBuffer.allocate(ChatServer.MSG_SIZE);
 		buffer.clear();
@@ -60,20 +60,12 @@ public abstract class Session {
 		}
 	}
 
-	public Message registeBackMsg() {
-		return Message.newBuilder()
-						.fromId(-1)
-						.toId(-1)
-						.type(Message.ALLOCATE_ID)
-						.time(System.currentTimeMillis())
-						.content(sessionId + "")
-						.build();
-	}
+	public abstract M registeBackMsg();
 
 	private void registe() throws IOException {
 		channel.configureBlocking(false);
 		channel.register(sKey.selector(), SelectionKey.OP_READ, ByteBuffer.allocate(ChatServer.MSG_SIZE));
-		Message msg = registeBackMsg();
+		M msg = registeBackMsg();
 		write(msg);
 		lastHeartBeatTime = System.currentTimeMillis();
 	}

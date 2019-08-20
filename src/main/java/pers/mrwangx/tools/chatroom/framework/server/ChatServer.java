@@ -27,7 +27,7 @@ import static pers.mrwangx.tools.chatroom.framework.server.ChatServerLogger.*;
  * @author: 王昊鑫
  * @create: 2019年08月10 16:56
  **/
-public abstract class ChatServer extends Thread {
+public abstract class ChatServer<S extends Session<M>, M extends Message> extends Thread {
 
     public static int MSG_SIZE;                    //单次消息大小
     private String host;                        //绑定本地的主机名
@@ -37,8 +37,8 @@ public abstract class ChatServer extends Thread {
     private long heartBeatCheckInterval;
     protected AtomicInteger currentSessionId;   //当前session的ID
 
-    protected SessionManager sessionManager;    //sessionManager 用于管理存储session
-    protected Handler handler;                    //处理每次消息的handler 会调用handle(session, message)方法
+    protected SessionManager<S> sessionManager;    //sessionManager 用于管理存储session
+    protected Handler<S, M> handler;                    //处理每次消息的handler 会调用handle(session, message)方法
 
     protected Selector selector = null;
     protected ServerSocketChannel sSChannel = null;   //服务器的channel
@@ -46,11 +46,11 @@ public abstract class ChatServer extends Thread {
 
     protected ExecutorService executorService;   //用于处理信息的线程池 构造方法不指定默认 最大处理量为400 队列长度为200 队列满之后会拒绝处理
 
-    public ChatServer(String host, int port, int timeout, int initSessionId, long heartBeatInterval, long heartBeatCheckInterval, SessionManager sessionManager, Handler handler, int MSG_SIZE) {
+    public ChatServer(String host, int port, int timeout, int initSessionId, long heartBeatInterval, long heartBeatCheckInterval, SessionManager<S> sessionManager, Handler handler, int MSG_SIZE) {
         this(host, port, timeout, initSessionId, heartBeatInterval, heartBeatCheckInterval, sessionManager, handler, MSG_SIZE, new ThreadPoolExecutor(200, 400, 1000, TimeUnit.MICROSECONDS, new ArrayBlockingQueue<>(200)));
     }
 
-    public ChatServer(String host, int port, int timeout, int initSessionId, long heartBeatInterval, long heartBeatCheckInterval, SessionManager sessionManager, Handler handler, int MSG_SIZE, ExecutorService executorService) {
+    public ChatServer(String host, int port, int timeout, int initSessionId, long heartBeatInterval, long heartBeatCheckInterval, SessionManager<S> sessionManager, Handler handler, int MSG_SIZE, ExecutorService executorService) {
         this.host = host;
         this.port = port;
         this.timeout = timeout;
@@ -101,7 +101,7 @@ public abstract class ChatServer extends Thread {
                             byte[] data = readData((SocketChannel) key.channel()); //读取字节数据
                             if (data != null) {
                                 executorService.execute(() -> {
-                                    Message msg = null;
+                                    M msg = null;
                                     try {
                                         msg = parseToMessage(sessionManager.get((SocketChannel) key.channel()), data);                           //将字节流数据转换为自定义的信息
                                     } catch (Exception e) {
@@ -109,7 +109,7 @@ public abstract class ChatServer extends Thread {
                                         warning("转换信息错误", e);
                                     }
                                     if (msg != null) {
-                                    	Session session = sessionManager.get((SocketChannel) key.channel());
+                                    	S session = sessionManager.get((SocketChannel) key.channel());
                                         handleHeartBeat(session);
                                         if (msg.getType() != Message.HEART_BEAT_PAC) {
                                             handler.handle(session, msg);
@@ -146,14 +146,14 @@ public abstract class ChatServer extends Thread {
      * @param data
      * @return
      */
-    public abstract Message parseToMessage(Session session, byte[] data);
+    public abstract M parseToMessage(S session, byte[] data);
 
     /**
      * session被创建时调用
      *
      * @param session
      */
-    public void sessionCreated(Session session) {
+    public void sessionCreated(S session) {
     }
 
     /**
@@ -162,15 +162,15 @@ public abstract class ChatServer extends Thread {
      * @param channel
      * @return
      */
-    protected abstract Session newSession(SocketChannel channel);
+    protected abstract S newSession(SocketChannel channel);
 
     public void accept(SocketChannel channel) {
-        Session session = this.newSession(channel);
+        S session = this.newSession(channel);
         sessionCreated(session);
         sessionManager.add(session);
     }
 
-    public void handleHeartBeat(Session session) {
+    public void handleHeartBeat(S session) {
         session.setLastHeartBeatTime(System.currentTimeMillis());
     }
 
@@ -180,7 +180,7 @@ public abstract class ChatServer extends Thread {
             byte[] data = new byte[MSG_SIZE];
             int i = 0, flag;
             if (channel.read(buffer) == -1) {
-                Session session = sessionManager.remove(channel);
+                S session = sessionManager.remove(channel);
                 info(session + "断开连接,移除");
                 channel.close();
                 return null;
@@ -201,7 +201,7 @@ public abstract class ChatServer extends Thread {
         } catch (IOException e) {
             warning("读取信息错误", e);
             try {
-                Session session = sessionManager.remove(channel);
+                S session = sessionManager.remove(channel);
                 info(session + "断开连接,移除");
                 channel.close();
             } catch (IOException ex) {
@@ -215,11 +215,10 @@ public abstract class ChatServer extends Thread {
         @Override
         public void run() {
             while (true) {
-                List<Session> delSessions = new ArrayList<>();
+                List<S> delSessions = new ArrayList<>();
                 sessionManager.getSessions().forEach(session -> {
-                    Session s = (Session) session;
-                    if (System.currentTimeMillis() - s.getLastHeartBeatTime() > heartBeatInterval) {
-                        delSessions.add(s);
+                    if (System.currentTimeMillis() - session.getLastHeartBeatTime() > heartBeatInterval) {
+                        delSessions.add(session);
                     }
                 });
                 delSessions.forEach(session -> {

@@ -4,11 +4,12 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
-import java.util.logging.Logger;
 
 import pers.mrwangx.tools.chatroom.framework.protocol.Message;
-import static pers.mrwangx.tools.chatroom.framework.util.StringUtil.*;
-import static pers.mrwangx.tools.chatroom.framework.client.ChatClientLogger.*;
+
+import static pers.mrwangx.tools.chatroom.framework.client.ChatClientLogger.info;
+import static pers.mrwangx.tools.chatroom.framework.client.ChatClientLogger.warning;
+import static pers.mrwangx.tools.chatroom.framework.util.StringUtil.str;
 
 
 /**
@@ -16,7 +17,7 @@ import static pers.mrwangx.tools.chatroom.framework.client.ChatClientLogger.*;
  * @author: 王昊鑫
  * @create: 2019年08月12 15:00
  **/
-public abstract class ChatClient {
+public abstract class ChatClient<M extends Message> {
 
 	private static int MSG_SIZE = 2048;
 	private long heartBeatInterval;
@@ -67,28 +68,34 @@ public abstract class ChatClient {
 	 * @param data
 	 * @return
 	 */
-	public abstract Message parseToMessage(byte[] data);
+	public abstract M parseToMessage(byte[] data);
 
 	/**
 	 * 将Message对象转换为字节数据
 	 * @param msg
 	 * @return
 	 */
-	public abstract byte[] parseToByteData(Message msg);
+	public abstract byte[] parseToByteData(M msg);
 
 
 	/**
 	 * 接收到信息，进行处理
 	 * @param msg
 	 */
-	public abstract void onReceiveMessage(Message msg);
+	public abstract void onReceiveMessage(M msg);
+
+	/**
+	 * 心跳包
+	 * @return
+	 */
+	public abstract M heartBeatMsg();
 
 
 	/**
 	 * 发送信息
 	 * @param msg
 	 */
-	public void sendMessage(Message msg) {
+	public void sendMessage(M msg) {
 		byte[] data = parseToByteData(msg);
 		buffer.clear();
 		buffer.put(data);
@@ -121,7 +128,7 @@ public abstract class ChatClient {
 					if (i > 0) {
 						byte[] datar = new byte[i];
 						System.arraycopy(data, 0, datar, 0, i);
-						Message msg = parseToMessage(datar);
+						M msg = parseToMessage(datar);
 						onReceiveMessage(msg);
 					}
 				} catch (IOException e) {
@@ -136,7 +143,7 @@ public abstract class ChatClient {
 
 		@Override
 		public void run() {
-			Message message = Message.newBuilder().type(Message.HEART_BEAT_PAC).build();
+			M message = heartBeatMsg();
 			while (true) {
 				sendMessage(message);
 				try {

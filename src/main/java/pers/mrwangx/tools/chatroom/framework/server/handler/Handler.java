@@ -8,8 +8,8 @@ import pers.mrwangx.tools.chatroom.framework.server.session.Session;
  * @description
  * @date 2019年08月08日 14:22
  ***/
-public interface Handler {
+public interface Handler<S extends  Session<M>, M extends Message> {
 
-	void handle(Session session, Message message);
+	void handle(S session, M message);
 
 }
