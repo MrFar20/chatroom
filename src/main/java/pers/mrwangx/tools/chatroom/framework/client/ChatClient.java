@@ -11,13 +11,12 @@ import static pers.mrwangx.tools.chatroom.framework.client.ChatClientLogger.info
 import static pers.mrwangx.tools.chatroom.framework.client.ChatClientLogger.warning;
 import static pers.mrwangx.tools.chatroom.framework.util.StringUtil.str;
 
-
 /**
  * @description:
  * @author: 王昊鑫
  * @create: 2019年08月12 15:00
  **/
-public abstract class ChatClient<M extends Message> {
+public abstract class ChatClient <M extends Message> {
 
 	private static int MSG_SIZE = 2048;
 	private long heartBeatInterval;
@@ -37,7 +36,6 @@ public abstract class ChatClient<M extends Message> {
 		this.MSG_SIZE = MSG_SIZE;
 		buffer = ByteBuffer.allocate(MSG_SIZE);
 	}
-
 
 	public boolean connect(InetSocketAddress address) {
 		boolean flag = false;
@@ -65,6 +63,7 @@ public abstract class ChatClient<M extends Message> {
 
 	/**
 	 * 将接收的字节数据转换为自定义的Message对象
+	 *
 	 * @param data
 	 * @return
 	 */
@@ -72,27 +71,29 @@ public abstract class ChatClient<M extends Message> {
 
 	/**
 	 * 将Message对象转换为字节数据
+	 *
 	 * @param msg
 	 * @return
 	 */
 	public abstract byte[] parseToByteData(M msg);
 
-
 	/**
 	 * 接收到信息，进行处理
+	 *
 	 * @param msg
 	 */
 	public abstract void onReceiveMessage(M msg);
 
 	/**
 	 * 心跳包
+	 *
 	 * @return
 	 */
 	public abstract M heartBeatMsg();
 
-
 	/**
 	 * 发送信息
+	 *
 	 * @param msg
 	 */
 	public void sendMessage(M msg) {
@@ -100,12 +101,12 @@ public abstract class ChatClient<M extends Message> {
 		buffer.clear();
 		buffer.put(data);
 		buffer.flip();
-		while (buffer.hasRemaining()) {
-			try {
+		try {
+			while (buffer.hasRemaining()) {
 				channel.write(buffer);
-			} catch (IOException e) {
-				warning("发送数据出错:", e);
 			}
+		} catch (IOException e) {
+			warning("发送数据出错", e);
 		}
 		buffer.clear();
 	}
@@ -114,7 +115,7 @@ public abstract class ChatClient<M extends Message> {
 
 		@Override
 		public void run() {
-			while (true) {
+			while (channel.isConnected()) {
 				ByteBuffer bufferRec = ByteBuffer.allocate(MSG_SIZE);
 				byte[] data = new byte[MSG_SIZE];
 				int i = 0;
@@ -144,7 +145,7 @@ public abstract class ChatClient<M extends Message> {
 		@Override
 		public void run() {
 			M message = heartBeatMsg();
-			while (true) {
+			while (channel.isConnected()) {
 				sendMessage(message);
 				try {
 					Thread.sleep(heartBeatInterval);
@@ -155,8 +156,5 @@ public abstract class ChatClient<M extends Message> {
 		}
 
 	}
-
-
-
 
 }
