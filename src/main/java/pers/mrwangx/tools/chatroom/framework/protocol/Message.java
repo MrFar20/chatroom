@@ -13,6 +13,9 @@ public class Message {
 	public static final int UPDATE_NAME = 3;
 	public static final int HEART_BEAT_PAC = 4;
 
+	public static final int FROM_SERVER = -1;
+	public static final int TO_BROADCAST = 0;
+
 	private int type;
 	private int fromId;
 	private String name;
