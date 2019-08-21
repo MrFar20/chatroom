@@ -26,6 +26,7 @@ public abstract class ChatClient <M extends Message> {
 	protected ReceiveTask receiveTask; //接收信息的线程
 	protected HeartBeatTask heartBeatTask;
 	protected ByteBuffer buffer;
+	protected boolean stoped = true;
 
 	public ChatClient(long heartBeatInterval) {
 		this(heartBeatInterval, MSG_SIZE);
@@ -46,6 +47,7 @@ public abstract class ChatClient <M extends Message> {
 			channel.connect(address);
 			if (channel.finishConnect() && channel.isConnected()) {
 				info("连接成功");
+				stoped = false;
 				(this.receiveTask = new ReceiveTask()).start();
 				(this.heartBeatTask = new HeartBeatTask()).start();
 				flag = true;
@@ -59,6 +61,22 @@ public abstract class ChatClient <M extends Message> {
 
 	public boolean connect(String host, int port) {
 		return connect(new InetSocketAddress(host, port));
+	}
+
+	public boolean reConnect() {
+		return connect(this.address);
+	}
+
+	public boolean stop() {
+		boolean flag = true;
+		stoped = true;
+		try {
+			channel.close();
+		} catch (IOException e) {
+			warning("关闭客户端错误", e);
+			flag = false;
+		}
+		return flag;
 	}
 
 	/**
@@ -115,14 +133,14 @@ public abstract class ChatClient <M extends Message> {
 
 		@Override
 		public void run() {
-			while (channel.isConnected()) {
+			while (!stoped && channel.isConnected()) {
 				ByteBuffer bufferRec = ByteBuffer.allocate(MSG_SIZE);
 				byte[] data = new byte[MSG_SIZE];
 				int i = 0;
 				try {
-					while (channel.read(bufferRec) > 0) {
+					while (!stoped && channel.read(bufferRec) > 0) {
 						bufferRec.flip();
-						while (bufferRec.hasRemaining()) {
+						while (!stoped && bufferRec.hasRemaining()) {
 							data[i++] = bufferRec.get();
 						}
 					}
@@ -145,7 +163,7 @@ public abstract class ChatClient <M extends Message> {
 		@Override
 		public void run() {
 			M message = heartBeatMsg();
-			while (channel.isConnected()) {
+			while (!stoped && channel.isConnected()) {
 				sendMessage(message);
 				try {
 					Thread.sleep(heartBeatInterval);
@@ -154,7 +172,18 @@ public abstract class ChatClient <M extends Message> {
 				}
 			}
 		}
-
 	}
 
+	public long getHeartBeatInterval() {
+		return heartBeatInterval;
+	}
+
+	public ChatClient<M> setHeartBeatInterval(long heartBeatInterval) {
+		this.heartBeatInterval = heartBeatInterval;
+		return this;
+	}
+
+	public boolean isStoped() {
+		return stoped;
+	}
 }
