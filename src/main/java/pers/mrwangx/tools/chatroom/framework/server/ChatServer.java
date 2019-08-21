@@ -211,6 +211,12 @@ public abstract class ChatServer<S extends Session<M>, M extends Message> extend
         return null;
     }
 
+    public void broadCast(M msg) {
+        sessionManager.getSessions().forEach(session -> {
+            session.write(msg);
+        });
+    }
+
     private class HeartBeatTask extends Thread {
         @Override
         public void run() {
